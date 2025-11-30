@@ -119,3 +119,15 @@ Disclaimer
 ----------
 
 This tool is for educational purposes and authorized security testing only. Do not use this tool on systems you do not have permission to test. The author is not responsible for any misuse.
+---
+
+<div align="center">
+  <h3>☕ Support My Journey</h3>
+</div>
+
+
+<div align="center">
+  <a href="https://www.buymeacoffee.com/tobiasguta">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" width="200" />
+  </a>
+</div>
