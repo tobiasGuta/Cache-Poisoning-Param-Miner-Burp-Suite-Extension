@@ -65,7 +65,7 @@ Installation
 1.  Clone the repository:
 
     ```
-    git clone https://github.com/tobiasGuta/Cache-Poisoning-Param-Miner-Burp-Suite-Extension-.git
+    git clone https://github.com/tobiasGuta/Cache-Poisoning-Param-Miner-Burp-Suite-Extension.git
     cd Cache-Poisoning-Param-Miner
 
     ```
