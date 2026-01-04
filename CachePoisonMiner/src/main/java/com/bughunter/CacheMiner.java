@@ -39,7 +39,7 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
             "X-Forwarded-Host", "X-Host", "X-Forwarded-Server", "X-Forwarded-Scheme",
             "X-Original-URL", "X-Rewrite-URL", "X-Forwarded-Proto", "X-Forwarded-For",
             "X-Real-IP", "Fastly-Client-IP", "True-Client-IP", "X-Custom-IP-Authorization",
-            "X-Frame-Options", "Origin", "Referer"
+            "X-Frame-Options", "Origin", "Referer", "X-Forwarded-Prefix"
     );
 
     @Override
@@ -48,14 +48,22 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
         api.extension().setName("Cache Poisoning Miner");
 
         SwingUtilities.invokeLater(() -> {
+            // Table Setup
             JTable table = new JTable(tableModel);
             table.setFont(new Font("SansSerif", Font.PLAIN, 12));
             table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+            // Adjust column widths for better readability
+            table.getColumnModel().getColumn(0).setPreferredWidth(150); // Header
+            table.getColumnModel().getColumn(1).setPreferredWidth(100); // Status
+            table.getColumnModel().getColumn(2).setPreferredWidth(120); // Cacheable
+            table.getColumnModel().getColumn(3).setPreferredWidth(400); // Context (Snippet)
 
             UserInterface ui = api.userInterface();
             requestViewer = ui.createHttpRequestEditor(EditorOptions.READ_ONLY);
             responseViewer = ui.createHttpResponseEditor(EditorOptions.READ_ONLY);
 
+            // Listener to update Request/Response viewers on row click
             table.getSelectionModel().addListSelectionListener(e -> {
                 if (!e.getValueIsAdjusting()) {
                     int selectedRow = table.getSelectedRow();
@@ -67,6 +75,7 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
                 }
             });
 
+            // Context Menu for the Table (Delete/Clear)
             JPopupMenu popupMenu = new JPopupMenu();
             JMenuItem deleteItem = new JMenuItem("Delete Item");
             JMenuItem clearItem = new JMenuItem("Clear History");
@@ -131,17 +140,16 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
         String canary = "canary" + (10000 + random.nextInt(90000));
 
         for (String header : MINING_HEADERS) {
-            // 1. Cache Buster: Append random parameter to avoid hitting existing cache
-            // We use "cb" (cache buster) = random value
+            // 1. Cache Buster: Append random parameter
             String buster = "cb=" + System.nanoTime();
             String path = originalRequest.path();
-
             String newPath = path.contains("?") ? path + "&" + buster : path + "?" + buster;
 
-            // 2. Inject Header
+            // 2. Inject Header safely (Remove existing first to avoid duplicates)
             HttpRequest attackRequest = originalRequest
                     .withPath(newPath)
-                    .withHeader(HttpHeader.httpHeader(header, canary)); // Inject Canary
+                    .withRemovedHeader(header)
+                    .withHeader(HttpHeader.httpHeader(header, canary));
 
             // 3. Send Request
             try {
@@ -150,14 +158,15 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
 
                 // 4. Check for Reflection
                 if (body.contains(canary)) {
-                    // FOUND ONE! The input is reflected.
-                    // Now check if it looks cacheable.
+
                     boolean cacheable = isCacheable(response);
+                    String snippet = extractSnippet(body, canary);
 
                     SwingUtilities.invokeLater(() -> tableModel.addResult(new MinerResult(
                             header,
                             "Reflected",
-                            cacheable ? "Yes (High Risk)" : "No (Reflected Only)",
+                            cacheable ? "YES (Potentially Poisonable)" : "No (Reflected Only)",
+                            snippet,
                             response
                     )));
                     api.logging().logToOutput("[!] Found Unkeyed Input: " + header);
@@ -168,15 +177,29 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
         }
     }
 
+    private String extractSnippet(String body, String canary) {
+        try {
+            int index = body.indexOf(canary);
+            if (index == -1) return "Canary not found";
+
+            int start = Math.max(0, index - 30);
+            int end = Math.min(body.length(), index + canary.length() + 30);
+
+            return "..." + body.substring(start, end).replace("\n", " ").replace("\r", " ") + "...";
+        } catch (Exception e) {
+            return "Error extracting snippet";
+        }
+    }
+
     private boolean isCacheable(HttpRequestResponse response) {
-        // Simple heuristic to check for caching headers
         for (HttpHeader h : response.response().headers()) {
             String name = h.name().toLowerCase();
             String value = h.value().toLowerCase();
 
             if (name.equals("age")) return true;
             if (name.equals("x-cache") && (value.contains("hit") || value.contains("miss"))) return true;
-            if (name.equals("cf-cache-status")) return true;
+            if (name.equals("cf-cache-status")) return true; // Cloudflare
+            if (name.equals("akamai-cache-status")) return true; // Akamai
             if (name.equals("cache-control") && value.contains("public")) return true;
         }
         return false;
@@ -185,11 +208,25 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
     // --- TABLE MODEL ---
     static class MinerTableModel extends AbstractTableModel {
         private final List<MinerResult> results = new ArrayList<>();
-        private final String[] columns = {"Header", "Status", "Cacheable?", "Canary"};
+        // Updated Columns
+        private final String[] columns = {"Header", "Status", "Cacheable?", "Reflection Context"};
 
-        public void addResult(MinerResult result) { results.add(result); fireTableRowsInserted(results.size()-1, results.size()-1); }
-        public void clear() { results.clear(); fireTableDataChanged(); }
-        public void removeRow(int row) { if (row >= 0 && row < results.size()) { results.remove(row); fireTableRowsDeleted(row, row); } }
+        public void addResult(MinerResult result) {
+            results.add(result);
+            fireTableRowsInserted(results.size()-1, results.size()-1);
+        }
+
+        public void clear() {
+            results.clear();
+            fireTableDataChanged();
+        }
+
+        public void removeRow(int row) {
+            if (row >= 0 && row < results.size()) {
+                results.remove(row);
+                fireTableRowsDeleted(row, row);
+            }
+        }
 
         public MinerResult getResult(int row) { return results.get(row); }
         @Override public int getRowCount() { return results.size(); }
@@ -201,17 +238,22 @@ public class CacheMiner implements BurpExtension, ContextMenuItemsProvider {
                 case 0: return r.header;
                 case 1: return r.status;
                 case 2: return r.cacheable;
-                case 3: return "Check Response"; // Placeholder
+                case 3: return r.snippet;
                 default: return "";
             }
         }
     }
 
     static class MinerResult {
-        String header, status, cacheable;
+        String header, status, cacheable, snippet;
         HttpRequestResponse requestResponse;
-        public MinerResult(String h, String s, String c, HttpRequestResponse rr) {
-            this.header = h; this.status = s; this.cacheable = c; this.requestResponse = rr;
+
+        public MinerResult(String h, String s, String c, String sn, HttpRequestResponse rr) {
+            this.header = h;
+            this.status = s;
+            this.cacheable = c;
+            this.snippet = sn;
+            this.requestResponse = rr;
         }
     }
 }
