@@ -16,17 +16,17 @@ This tool automates the tedious process of fuzzing headers/parameters/cookies, b
 What's New in v2.0
 ------------------
 
--   **Parameter & Cookie Mining** — No longer limited to headers. Now fuzzes 20+ common unkeyed query parameters (UTM, tracking, JSONP, debug) and 12+ cookies (language, locale, theme, tracking).
--   **Automatic Poisoning Confirmation** — After detecting a cacheable reflection, the tool automatically sends a clean follow-up request to verify whether the poisoned response was actually cached and served back.
--   **Baseline Comparison** — A clean baseline request is sent before probing. Responses that differ significantly (>50 bytes) are flagged even without direct canary reflection.
--   **Parallelized Probing** — All probes now run concurrently across a 10-thread pool, dramatically speeding up scans.
--   **Improved Cacheability Analysis** — Validates cache header *values* (not just presence). `CF-Cache-Status: BYPASS` is correctly identified as non-cacheable. Checks for negative cache indicators (`no-store`, `private`, `no-cache`, `Pragma`, `Surrogate-Control`).
--   **Cryptographically Secure Canaries** — Uses `SecureRandom` to generate unique 24-character hex canaries per probe. No more predictable patterns.
--   **Progress Tracking** — Real-time progress bar and status label showing `"42/67 probes completed"`.
--   **Cancel Scan** — Abort a running scan at any time via the toolbar.
--   **Export Results** — Export findings to CSV or JSON for reporting.
--   **Color-Coded Risk Table** — Critical (red), High (orange), Medium (amber), Info (blue) with a dedicated "Confirmed" column.
--   **Thread Safety & Stability** — Synchronized table model, null-safe response handling, proper executor shutdown on extension unload, and capped result list (10,000 max).
+-   **Parameter & Cookie Mining** No longer limited to headers. Now fuzzes 20+ common unkeyed query parameters (UTM, tracking, JSONP, debug) and 12+ cookies (language, locale, theme, tracking).
+-   **Automatic Poisoning Confirmation** After detecting a cacheable reflection, the tool automatically sends a clean follow-up request to verify whether the poisoned response was actually cached and served back.
+-   **Baseline Comparison** A clean baseline request is sent before probing. Responses that differ significantly (>50 bytes) are flagged even without direct canary reflection.
+-   **Parallelized Probing** All probes now run concurrently across a 10-thread pool, dramatically speeding up scans.
+-   **Improved Cacheability Analysis** Validates cache header *values* (not just presence). `CF-Cache-Status: BYPASS` is correctly identified as non-cacheable. Checks for negative cache indicators (`no-store`, `private`, `no-cache`, `Pragma`, `Surrogate-Control`).
+-   **Cryptographically Secure Canaries** Uses `SecureRandom` to generate unique 24-character hex canaries per probe. No more predictable patterns.
+-   **Progress Tracking** Real-time progress bar and status label showing `"42/67 probes completed"`.
+-   **Cancel Scan** Abort a running scan at any time via the toolbar.
+-   **Export Results** Export findings to CSV or JSON for reporting.
+-   **Color-Coded Risk Table** Critical (red), High (orange), Medium (amber), Info (blue) with a dedicated "Confirmed" column.
+-   **Thread Safety & Stability** Synchronized table model, null-safe response handling, proper executor shutdown on extension unload, and capped result list (10,000 max).
 
 Features
 --------
@@ -183,6 +183,8 @@ Tech Stack
 -   **Security:** `SecureRandom` for canary & cache buster generation
 
 -   **UI:** Swing (JTable with custom cell renderer, JToolBar, JProgressBar, JSplitPane)
+
+https://github.com/user-attachments/assets/5ce6b8e2-a833-4ab2-bd1c-aa5a1ce9c6bc
 
 Disclaimer
 ----------
