@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.bughunter'
+version = '2.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly 'net.portswigger.burp.extensions:montoya-api:2025.3'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+jar {
+    archiveFileName = 'CacheMiner.jar'
+}
